@@ -21,33 +21,37 @@ class Block:
 
     def draw(self):
         for block in self.position:
-            self.drawBlock(self.color, black, (block[0], block[1], 30, 30))
+            self.drawBlock(self.color, black, (block[0]*30, block[1]*30, 30, 30))
 
-    def fall(self, fallspeed):
-        self.position = [(block[0], block[1] + fallspeed) for block in self.position]            
+    def fall(self):
+        if any(block[1] > 16 for block in self.position):
+            self.falling = False
+        if self.falling:
+            self.position = [(block[0], block[1] + 1) for block in self.position]
+        return self.falling
                 
     def randomBlock(self, randomblock):
-        initpos = [240,0]
+        initpos = [1,1]
         if randomblock == 1: #Block
-            return [(initpos[0], initpos[1]), (initpos[0]+30, initpos[1]), (initpos[0], initpos[1]+30), (initpos[0]+30, initpos[1]+30)]
+            return [(initpos[0], initpos[1]), (initpos[0]+1, initpos[1]), (initpos[0], initpos[1]+1), (initpos[0]+1, initpos[1]+1)]
         elif randomblock == 2: #Straight
-            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+30), (initpos[0], initpos[1]+60), (initpos[0], initpos[1]+90)]
+            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+1), (initpos[0], initpos[1]+2), (initpos[0], initpos[1]+3)]
         elif randomblock == 3: #LeftLong
-            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+30), (initpos[0], initpos[1]+60), (initpos[0]+30, initpos[1]+60)]
+            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+1), (initpos[0], initpos[1]+2), (initpos[0]+1, initpos[1]+2)]
         elif randomblock == 4: #RightLong
-            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+30), (initpos[0], initpos[1]+60), (initpos[0]-30, initpos[1]+60)]
+            return [(initpos[0], initpos[1]), (initpos[0], initpos[1]+1), (initpos[0], initpos[1]+2), (initpos[0]-1, initpos[1]+2)]
         elif randomblock == 5: #Middle
-            return [(initpos[0], initpos[1]), (initpos[0]-30, initpos[1]), (initpos[0]+30, initpos[1]), (initpos[0], initpos[1]+30)]
+            return [(initpos[0], initpos[1]), (initpos[0]-1, initpos[1]), (initpos[0]+1, initpos[1]), (initpos[0], initpos[1]+1)]
         elif randomblock == 6:
-            return [(initpos[0], initpos[1]), (initpos[0]-30, initpos[1]), (initpos[0]+30, initpos[1]+30), (initpos[0], initpos[1]+30)]
+            return [(initpos[0], initpos[1]), (initpos[0]-1, initpos[1]), (initpos[0]+1, initpos[1]+1), (initpos[0], initpos[1]+1)]
         else:
-            return [(initpos[0], initpos[1]), (initpos[0]+30, initpos[1]), (initpos[0]-30, initpos[1]+30), (initpos[0], initpos[1]+30)]
+            return [(initpos[0], initpos[1]), (initpos[0]+1, initpos[1]), (initpos[0]-1, initpos[1]+1), (initpos[0], initpos[1]+1)]
 
     def randomColor(self, randomblock):
         if randomblock == 1:
             return red
         elif randomblock == 2:
-            return white
+            return black
         elif randomblock == 3:
             return purple
         elif randomblock == 4:
@@ -63,21 +67,35 @@ class Block:
         pygame.draw.rect(screen, color, location, 0)
         pygame.draw.rect(screen, outline, location, 1)
 
+    def showPos(self):
+        print self.position
 
-def drawBlock(color, outline, location):
-    pygame.draw.rect(screen, color, location, 0)
-    pygame.draw.rect(screen, outline, location, 1)
+    def moveLeft(self):
+        if all(block[0] >= 2 for block in self.position) and self.falling:
+            self.position = [(block[0] - 1, block[1]) for block in self.position]
+
+    def moveRight(self):
+        if all(block[0] <= 9 for block in self.position) and self.falling:
+            self.position = [(block[0] + 1, block[1]) for block in self.position]
 
 
 
+
+def drawPile(pileBlocks):
+    for block in pileBlocks:
+        pygame.draw.rect(screen, block[1], (block[0][0]*30, block[0][1]*30, 30, 30), 0)
+        pygame.draw.rect(screen, black, (block[0][0]*30, block[0][1]*30, 30, 30), 1)
+    
 def run():
     clocker = pygame.time.Clock()
     fallspeed = 50
     temp = Block()
-    
+    time = 0
+    pileBlocks = []
+        
     while 1:
         clocker.tick()
-        time = clocker.get_time()
+        time += clocker.get_time()
         #firstblock = (initpos[0], initpos[1] + fallspeed * float(time)/1000)
         
         screen.fill((255, 255, 255))
@@ -86,15 +104,30 @@ def run():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_LEFT:
+                if event.key == pygame.K_n:
                     temp = Block()
+                elif event.key == pygame.K_m:
+                    temp.showPos()
+                elif event.key == pygame.K_LEFT:
+                    temp.moveLeft()
+                elif event.key == pygame.K_RIGHT:
+                    temp.moveRight()
+                
               #      initpos = (initpos[0] - 30, initpos[1])
                # elif event.key == pygame.K_RIGHT:
                 #    initpos = (initpos[0] + 30, initpos[1])
-
+        #print time
         #drawBlock(red, black, (initpos[0], initpos[1], 30,30))
-        temp.fall(fallspeed * float(time)/1000)
+        if (float(time) /10 > fallspeed):
+            time = 0
+            if not temp.fall():
+                for block in temp.position:
+                    pileBlocks.append((block,temp.color))
+                    print pileBlocks
+                temp = Block()
+
         temp.draw()
-        drawBlock(blue, black, (200, 320, 30, 30))
+        drawPile(pileBlocks)
+        #drawBlock(blue, black, (200, 320, 30, 30))
         pygame.display.flip()
         
